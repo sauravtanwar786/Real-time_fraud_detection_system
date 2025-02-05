@@ -1,26 +1,59 @@
 version: '3.8'
 
 services:
-  cassandra:
-    image: cassandra:5.0
-    container_name: cassandra
-    ports:
-      - "9042:9042"  # Default Cassandra port
-    restart: always
-    volumes:
-      - ./cassandra/data:/var/lib/cassandra
-    healthcheck:
-      test: ["CMD", "cqlsh", "-u cassandra", "-p cassandra", "-e", "describe keyspaces"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
+  # cassandra:
+  #   image: cassandra:5.0
+  #   container_name: cassandra
+  #   ports:
+  #     - "9042:9042"  # Default Cassandra port
+  #   restart: always
+  #   volumes:
+  #     - ./cassandra/data:/var/lib/cassandra
+  #   healthcheck:
+  #     test: ["CMD", "cqlsh", "-u cassandra", "-p cassandra", "-e", "describe keyspaces"]
+  #     interval: 15s
+  #     timeout: 10s
+  #     retries: 10
 
-  cassandra-load-keyspace:
-    container_name: cassandra-load-keyspace
-    image: cassandra:5.0
-    depends_on:
-        cassandra:
-          condition: service_healthy
+  # cassandra-load-keyspace:
+  #   container_name: cassandra-load-keyspace
+  #   image: cassandra:5.0
+  #   depends_on:
+  #       cassandra:
+  #         condition: service_healthy
+  #   volumes:
+  #     - ./cassandra/cassandra.cql:/schema.cql
+  #   command: /bin/bash -c "echo 'Loading Cassandra keyspace...' && cqlsh cassandra -u cassandra -p cassandra -f /schema.cql"
+
+  postgres:
+    image: postgres:15.10
+    container_name: postgres
+    hostname: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
     volumes:
-      - ./cassandra/cassandra.cql:/schema.cql
-    command: /bin/bash -c "echo 'Loading Cassandra keyspace...' && cqlsh cassandra -u cassandra -p cassandra -f /schema.cql"
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+
+  datagen:
+    build:
+      context: .
+      dockerfile: ./datagen/Dockerfile
+    container_name: datagen
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+    restart: on-failure
+    depends_on:
+      - postgres
+    entrypoint:
+      - python
+      - ./data_gen.py 
+  
