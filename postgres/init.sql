@@ -1,7 +1,7 @@
 -- create a commerce schema
 CREATE SCHEMA payment;
 
--- Use commerce schema
+-- Use payment schema
 SET
     search_path TO payment;
 -- Customers Table
@@ -31,3 +31,12 @@ CREATE TABLE transactions (
     FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE,
     FOREIGN KEY (terminal_id) REFERENCES terminals(terminal_id) ON DELETE CASCADE
 );
+
+ALTER TABLE
+    customers REPLICA IDENTITY FULL;
+
+ALTER TABLE
+    terminals REPLICA IDENTITY FULL;
+
+ALTER TABLE
+    transactions REPLICA IDENTITY FULL;
