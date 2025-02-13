@@ -9,6 +9,7 @@ from pyspark.sql.types import DoubleType
 import pickle
 import pandas as pd
 import time
+import joblib
 
 ## DEFINE SENSITIVE VARIABLES
 CATALOG_URI = "http://nessie:19120/api/v1"  # Nessie Server URI
@@ -80,6 +81,10 @@ except botocore.exceptions.ClientError as e:
 with open(LOCAL_MODEL_PATH, "rb") as f:
     model = pickle.load(f)
 
+
+loaded_scaler = joblib.load('/opt/data/scaler.pkl')
+
+
 # Define a Pandas UDF for inference
 @pandas_udf(DoubleType())  # Assuming model outputs a float
 def predict_udf(*cols: pd.Series) -> pd.Series:
@@ -90,16 +95,9 @@ def predict_udf(*cols: pd.Series) -> pd.Series:
 
 df = spark.readStream \
     .format("iceberg") \
-    .option("stream-from-timestamp", int(time.time() * 1000)) \
     .load(input_table)
 
-# # join the data with the feature_customer table and with feature_temrinal table basis cusotmer_id and terminal_id
-# df = df.join(spark.table("nessie.payment.feature_customer"), df.customer_id == col("customer_id"), "left") \
-#     .join(spark.table("nessie.payment.feature_terminal"), df.terminal_id == col("terminal_id"), "left")
-
-# # compute two more features basis whether transaction happended on weekend or not and whether transaction happended on night or not basis column tx_datetime that is timestamp column
-# df = df.withColumn("is_weekend", (col("tx_datetime").cast("timestamp").dayofweek >= 5).cast("int")) \
-#     .withColumn("is_night", (col("tx_datetime").cast("timestamp").hour >= 20).cast("int"))
+# df = spark.read.table(input_table)
 
 # write all the above transformations in a sql
 df.createOrReplaceTempView("latest_transactions")
@@ -107,20 +105,20 @@ df.createOrReplaceTempView("latest_transactions")
 enriched_df = spark.sql("""
 select
     lt.*,
-    if(dayofweek(tx_datetime) >= 5, 1, 0) as is_weekend,
-    if(hour(tx_datetime) >= 20, 1, 0) as is_night,
-    customer_id_nb_tx_1day_window,
-      customer_id_avg_amount_1day_window,
-      customer_id_nb_tx_7day_window,
-      customer_id_avg_amount_7day_window,
-      customer_id_nb_tx_30day_window,
-      customer_id_avg_amount_30day_window,
-      terminal_id_nb_tx_1day_window,
-      terminal_id_risk_1day_window,
-      terminal_id_nb_tx_7day_window,
-      terminal_id_risk_7day_window,
-      terminal_id_nb_tx_30day_window,
-      terminal_id_risk_30day_window,
+    if(dayofweek(tx_datetime) >= 5, 1, 0) as TX_DURING_WEEKEND,
+    if(hour(tx_datetime) >= 20, 1, 0) as TX_DURING_NIGHT,
+    customer_id_nb_tx_1day_window as CUSTOMER_ID_NB_TX_1DAY_WINDOW,
+      customer_id_avg_amount_1day_window as CUSTOMER_ID_AVG_AMOUNT_1DAY_WINDOW,
+      customer_id_nb_tx_7day_window as CUSTOMER_ID_NB_TX_7DAY_WINDOW,
+      customer_id_avg_amount_7day_window as CUSTOMER_ID_AVG_AMOUNT_7DAY_WINDOW,
+      customer_id_nb_tx_30day_window as CUSTOMER_ID_NB_TX_30DAY_WINDOW,
+      customer_id_avg_amount_30day_window as CUSTOMER_ID_AVG_AMOUNT_30DAY_WINDOW,
+      terminal_id_nb_tx_1day_window as TERMINAL_ID_NB_TX_1DAY_WINDOW,
+      terminal_id_risk_1day_window as TERMINAL_ID_RISK_1DAY_WINDOW,
+      terminal_id_nb_tx_7day_window     as TERMINAL_ID_NB_TX_7DAY_WINDOW,
+      terminal_id_risk_7day_window as TERMINAL_ID_RISK_7DAY_WINDOW,
+      terminal_id_nb_tx_30day_window as TERMINAL_ID_NB_TX_30DAY_WINDOW,
+      terminal_id_risk_30day_window as TERMINAL_ID_RISK_30DAY_WINDOW,
       current_timestamp() as processed_at
 from latest_transactions lt 
 left join nessie.payment.feature_customer fc
@@ -129,29 +127,16 @@ left join nessie.payment.feature_terminal ft
 on lt.terminal_id = ft.terminal_id
 """)
 
-
-
-# feature columns are 'TX_AMOUNT','TX_DURING_WEEKEND', 'TX_DURING_NIGHT', 'CUSTOMER_ID_NB_TX_1DAY_WINDOW',
-    #    'CUSTOMER_ID_AVG_AMOUNT_1DAY_WINDOW', 'CUSTOMER_ID_NB_TX_7DAY_WINDOW',
-    #    'CUSTOMER_ID_AVG_AMOUNT_7DAY_WINDOW', 'CUSTOMER_ID_NB_TX_30DAY_WINDOW',
-    #    'CUSTOMER_ID_AVG_AMOUNT_30DAY_WINDOW', 'TERMINAL_ID_NB_TX_1DAY_WINDOW',
-    #    'TERMINAL_ID_RISK_1DAY_WINDOW', 'TERMINAL_ID_NB_TX_7DAY_WINDOW',
-    #    'TERMINAL_ID_RISK_7DAY_WINDOW', 'TERMINAL_ID_NB_TX_30DAY_WINDOW',
-    #    'TERMINAL_ID_RISK_30DAY_WINDOW'
-
 # make a list of feature columns in small case
-feature_columns = ['tx_amount', 'is_weekend', 'is_night', 'customer_id_nb_tx_1day_window',
-                   'customer_id_avg_amount_1day_window', 'customer_id_nb_tx_7day_window',
-                   'customer_id_avg_amount_7day_window', 'customer_id_nb_tx_30day_window',
-                   'customer_id_avg_amount_30day_window', 'terminal_id_nb_tx_1day_window',
-                   'terminal_id_risk_1day_window', 'terminal_id_nb_tx_7day_window',
-                   'terminal_id_risk_7day_window', 'terminal_id_nb_tx_30day_window',
-                   'terminal_id_risk_30day_window']
+feature_columns = ['TX_AMOUNT','TX_DURING_WEEKEND', 'TX_DURING_NIGHT', 'CUSTOMER_ID_NB_TX_1DAY_WINDOW',
+       'CUSTOMER_ID_AVG_AMOUNT_1DAY_WINDOW', 'CUSTOMER_ID_NB_TX_7DAY_WINDOW',
+       'CUSTOMER_ID_AVG_AMOUNT_7DAY_WINDOW', 'CUSTOMER_ID_NB_TX_30DAY_WINDOW',
+       'CUSTOMER_ID_AVG_AMOUNT_30DAY_WINDOW', 'TERMINAL_ID_NB_TX_1DAY_WINDOW',
+       'TERMINAL_ID_RISK_1DAY_WINDOW', 'TERMINAL_ID_NB_TX_7DAY_WINDOW',
+       'TERMINAL_ID_RISK_7DAY_WINDOW', 'TERMINAL_ID_NB_TX_30DAY_WINDOW',
+       'TERMINAL_ID_RISK_30DAY_WINDOW']
 
-# Apply the model for inference
-df = enriched_df.withColumn("prediction", predict_udf(*[col(f) for f in feature_columns]))
-
-# Write results to another Iceberg table
+spark.sql("drop table if exists nessie.payment.analyzed_transactions")
 
 spark.sql("""
     create table if not exists nessie.payment.analyzed_transactions (
@@ -162,8 +147,8 @@ spark.sql("""
                     tx_amount DECIMAL(10,2),
     row_created_timestamp TIMESTAMP,
     row_updated_timestamp TIMESTAMP,
-    is_weekend INT,
-    is_night INT,
+    TX_DURING_WEEKEND INT,
+    TX_DURING_NIGHT INT,
     customer_id_nb_tx_1day_window INT,
     customer_id_avg_amount_1day_window DOUBLE,
     customer_id_nb_tx_7day_window INT,
@@ -182,7 +167,46 @@ spark.sql("""
     using iceberg
           """).show()
 
-query = df.writeStream \
+# query = df.writeStream \
+#     .format("iceberg") \
+#     .option("checkpointLocation", CHECKPOINT_PATH) \
+#     .outputMode("append") \
+#     .trigger(processingTime="10 seconds") \
+#     .start(output_table)
+
+# query.awaitTermination()
+
+input_features=['TX_AMOUNT','TX_DURING_WEEKEND', 'TX_DURING_NIGHT', 'CUSTOMER_ID_NB_TX_1DAY_WINDOW',
+       'CUSTOMER_ID_AVG_AMOUNT_1DAY_WINDOW', 'CUSTOMER_ID_NB_TX_7DAY_WINDOW',
+       'CUSTOMER_ID_AVG_AMOUNT_7DAY_WINDOW', 'CUSTOMER_ID_NB_TX_30DAY_WINDOW',
+       'CUSTOMER_ID_AVG_AMOUNT_30DAY_WINDOW', 'TERMINAL_ID_NB_TX_1DAY_WINDOW',
+       'TERMINAL_ID_RISK_1DAY_WINDOW', 'TERMINAL_ID_NB_TX_7DAY_WINDOW',
+       'TERMINAL_ID_RISK_7DAY_WINDOW', 'TERMINAL_ID_NB_TX_30DAY_WINDOW',
+       'TERMINAL_ID_RISK_30DAY_WINDOW']
+
+# Define a single Pandas UDF for Scaling & Prediction
+@pandas_udf("double")
+def scale_and_predict_udf(*cols: pd.Series) -> pd.Series:
+    # Recreate DataFrame with correct column names
+    features = pd.concat(cols, axis=1)
+    features.columns = feature_columns  # Explicitly set column names
+
+    # Apply scaling
+    scaled_features = loaded_scaler.transform(features)
+
+    # Make predictions
+    predictions = model.predict_proba(scaled_features)[:, 1]
+
+    return pd.Series(predictions)
+
+
+# Apply the combined UDF in Spark
+enriched_df = enriched_df.withColumn(
+    "prediction", scale_and_predict_udf(*[col(f) for f in feature_columns])
+)
+
+# Write results to Iceberg Table
+query = enriched_df.writeStream \
     .format("iceberg") \
     .option("checkpointLocation", CHECKPOINT_PATH) \
     .outputMode("append") \

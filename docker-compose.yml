@@ -94,16 +94,15 @@ services:
       /usr/bin/mc policy download myminio/commerce;
       "
 
-  spark-master:
+  pyspark:
     build:
       context: ./pyspark
       dockerfile: Dockerfile
-    container_name: spark-master
+    container_name: pyspark
     environment:
-      SPARK_MODE: master
-    ports:
-      - "7077:7077"
-      - "8080:8080"
+      - SPARK_DRIVER_MEMORY=12g
+      - SPARK_EXECUTOR_MEMORY=12g
+      - SPARK_EXECUTOR_CORES=*
     volumes:
       - ./pyspark/scripts:/opt/code/
       - ./data:/opt/data
@@ -111,32 +110,6 @@ services:
       - zookeeper
       - kafka
       - minio
-
-  spark-worker-1:
-    build:
-      context: ./pyspark
-      dockerfile: Dockerfile
-    container_name: spark-worker-1
-    environment:
-      SPARK_MODE: worker
-      SPARK_MASTER_URL: "spark://spark-master:7077"
-    depends_on:
-      - spark-master
-    ports:
-      - "8081:8081"
-
-  spark-worker-2:
-    build:
-      context: ./pyspark
-      dockerfile: Dockerfile
-    container_name: spark-worker-2
-    environment:
-      SPARK_MODE: worker
-      SPARK_MASTER_URL: "spark://spark-master:7077"
-    depends_on:
-      - spark-master
-    ports:
-      - "8082:8081"
 
   datagen:
     build:

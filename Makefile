@@ -3,12 +3,12 @@ up:
 	docker compose up -d --build
 
 remove-minio-data:
-	rm -rf ./minio/data
+	sudo rm -rf ./volume/minio
 
 compose-down:
 	docker compose down -v
 
-down: compose-down
+down: compose-down remove-minio-data
 
 restart: down up
 
@@ -24,26 +24,31 @@ pg-src:
 connectors: pg-src
 
 # Variables
-SPARK_MASTER_URL = spark://spark-master:7077
+SPARK_DOCKER_EXEC = docker exec -it pyspark
 SPARK_JOBS_PATH = /opt/code
-SPARK_DOCKER_EXEC = docker exec -it spark-master
+SPARK_SUBMIT = $(SPARK_DOCKER_EXEC) spark-submit \
+    --master local[*] \
+    --deploy-mode client \
+    --driver-memory 10G \
+    --executor-memory 6G \
+    --executor-cores 4 \
+    --jars /opt/bitnami/spark/jars/*
 
 # Job targets
 load_initial_data:
-	$(SPARK_DOCKER_EXEC) /opt/bitnami/spark/bin/spark-submit --master $(SPARK_MASTER_URL) $(SPARK_JOBS_PATH)/load_initial_data.py
+	$(SPARK_SUBMIT) $(SPARK_JOBS_PATH)/load_initial_data.py
 
 fraud_detection:
-	$(SPARK_DOCKER_EXEC) /opt/bitnami/spark/bin/spark-submit --master $(SPARK_MASTER_URL) $(SPARK_JOBS_PATH)/fraud_detection.py
-
+	$(SPARK_SUBMIT) $(SPARK_JOBS_PATH)/fraud_detection.py
 
 job1:
-	$(SPARK_DOCKER_EXEC) /opt/bitnami/spark/bin/spark-submit --master $(SPARK_MASTER_URL) $(SPARK_JOBS_PATH)/kafka_s3_sink_customers.py
+	$(SPARK_SUBMIT) $(SPARK_JOBS_PATH)/kafka_s3_sink_customers.py
 
 job2:
-	$(SPARK_DOCKER_EXEC) /opt/bitnami/spark/bin/spark-submit --master $(SPARK_MASTER_URL) $(SPARK_JOBS_PATH)/kafka_s3_sink_terminals.py
+	$(SPARK_SUBMIT) $(SPARK_JOBS_PATH)/kafka_s3_sink_terminals.py
 
 job3:
-	$(SPARK_DOCKER_EXEC) /opt/bitnami/spark/bin/spark-submit --master $(SPARK_MASTER_URL) $(SPARK_JOBS_PATH)/kafka_s3_sink_transactions.py
+	$(SPARK_SUBMIT) $(SPARK_JOBS_PATH)/kafka_s3_sink_transactions.py
 
 # Run all jobs sequentially
 run-all: job1 job2 job3

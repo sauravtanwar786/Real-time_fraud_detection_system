@@ -117,7 +117,7 @@ def scaleData(train,test,features):
     train[features]=scaler.transform(train[features])
     test[features]=scaler.transform(test[features])
     
-    return (train,test)
+    return (train,test, scaler)
 
 
 # ## Train/Test splitting strategies
