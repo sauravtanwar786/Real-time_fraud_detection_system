@@ -8,7 +8,7 @@ remove-minio-data:
 compose-down:
 	docker compose down -v
 
-down: compose-down remove-minio-data
+down: compose-down
 
 restart: down up
 
@@ -25,10 +25,17 @@ connectors: pg-src
 
 # Variables
 SPARK_MASTER_URL = spark://spark-master:7077
-SPARK_JOBS_PATH = /opt/code/
+SPARK_JOBS_PATH = /opt/code
 SPARK_DOCKER_EXEC = docker exec -it spark-master
 
 # Job targets
+load_initial_data:
+	$(SPARK_DOCKER_EXEC) /opt/bitnami/spark/bin/spark-submit --master $(SPARK_MASTER_URL) $(SPARK_JOBS_PATH)/load_initial_data.py
+
+fraud_detection:
+	$(SPARK_DOCKER_EXEC) /opt/bitnami/spark/bin/spark-submit --master $(SPARK_MASTER_URL) $(SPARK_JOBS_PATH)/fraud_detection.py
+
+
 job1:
 	$(SPARK_DOCKER_EXEC) /opt/bitnami/spark/bin/spark-submit --master $(SPARK_MASTER_URL) $(SPARK_JOBS_PATH)/kafka_s3_sink_customers.py
 

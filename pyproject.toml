@@ -25,4 +25,6 @@ pandarallel = "^1.6.5"
 seaborn = "^0.13.2"
 xgboost = "^2.1.4"
 duckdb = "^1.2.0"
+polars = "^1.22.0"
+boto3 = "^1.36.20"
 

@@ -106,6 +106,7 @@ services:
       - "8080:8080"
     volumes:
       - ./pyspark/scripts:/opt/code/
+      - ./data:/opt/data
     depends_on:
       - zookeeper
       - kafka

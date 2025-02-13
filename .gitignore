@@ -172,3 +172,4 @@ cython_debug/
 cassandra/data
 *.pkl
 volume
+data
