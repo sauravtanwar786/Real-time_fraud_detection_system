@@ -15,3 +15,31 @@ All the commands shown below are to be run via the terminal (use the Ubuntu term
 We have some helpful make commands to make working with our systems more accessible. Shown below are the make commands and their definitions
 
 ### Architecture
+
+Pending Tasks:
+
+3. Ml Model changes
+   -  Data generate 1 june 2024 -> 31 jan 2025
+   - code cleanup
+   -  1 jan 2025 -> 2025-01-01 ->  csv files (move into ) -> demo -> 
+        - datagen script read and write into postgres (later)
+   - column name changes according to postgres (later)
+   - Model training 
+     1 june 2024 -> 31 oct 2024 -> training
+     7 nov -> 31 dec -> testing set 
+     train models
+   -  Save the best model in .pkl (scikit learn -> how to save the model)
+      save in minio  
+
+   1 hrs 
+
+4. transaction spark streaming 
+ - replicate
+ - load model from minio
+ - transformation for feature engineering
+ - udf -> input all columns -> fraud 
+ - save it in a new table  
+
+dophar 1 bje tak
+
+report -> 
