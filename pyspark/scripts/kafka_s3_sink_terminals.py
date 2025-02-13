@@ -1,28 +1,51 @@
+import pyspark
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StringType
-from pyspark.sql.functions import col
-from pyspark.sql.types import StringType, StructType, StructField
+from pyspark.sql.types import StringType, StructType, StructField, IntegerType, DoubleType, LongType
+from pyspark.sql.functions import col, from_json
 
+## DEFINE SENSITIVE VARIABLES
+CATALOG_URI = "http://nessie:19120/api/v1"  # Nessie Server URI
+WAREHOUSE = "s3a://commerce/warehouse/"  # S3 Address to Write to
 KAFKA_BROKERS = 'kafka:9092'
-#KAFKA_TOPIC_NAME = "debezium.payment.terminals"
 S3_ENDPOINT = "http://minio:9000"
 CHECKPOINT_PATH = "s3a://commerce/checkpoints/debezium.payment.terminals/"
 
+# S3 Credentials
+S3_ACCESS_KEY = "minio"
+S3_SECRET_KEY = "minio123"
 
-from pyspark.sql import SparkSession
-spark = (SparkSession.builder
-                .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.1,org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.7.1,org.apache.hadoop:hadoop-aws:3.3.2")
-                .config("spark.hadoop.fs.s3a.endpoint", S3_ENDPOINT) 
-                .config("spark.hadoop.fs.s3a.access.key", "minio") 
-                .config("spark.hadoop.fs.s3a.secret.key", "minio123") 
-                .config("spark.hadoop.fs.s3a.path.style.access", "true") 
-                .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
-                .config("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkSessionCatalog")
-                .config("spark.sql.catalog.spark_catalog.type", "hadoop")
-                .config("spark.sql.catalog.spark_catalog.warehouse", "s3a://commerce/warehouse/") 
-                .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions") 
-                .appName("streaming_sink_terminals")
-         .getOrCreate())
+conf = (
+    pyspark.SparkConf()
+        .setAppName('terminals')
+        # Packages
+        .set('spark.jars.packages', 'org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.1,'
+                                    'org.apache.hadoop:hadoop-aws:3.3.2,'
+                                    'org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.5.0,'
+                                    'org.projectnessie.nessie-integrations:nessie-spark-extensions-3.5_2.12:0.77.1')
+        # SQL Extensions
+        .set('spark.sql.extensions', 'org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions,'
+                                     'org.projectnessie.spark.extensions.NessieSparkSessionExtensions')
+        # Configuring Catalog
+        .set('spark.sql.catalog.nessie', 'org.apache.iceberg.spark.SparkCatalog')
+        .set('spark.sql.catalog.nessie.uri', CATALOG_URI)
+        .set('spark.sql.catalog.nessie.ref', 'main')
+        .set('spark.sql.catalog.nessie.authentication.type', 'NONE')
+        .set('spark.sql.catalog.nessie.catalog-impl', 'org.apache.iceberg.nessie.NessieCatalog')
+        .set('spark.sql.catalog.nessie.warehouse', WAREHOUSE)
+        .set('spark.sql.catalog.nessie.s3.secret.region', 'us-east-1')
+
+        # S3 Configuration
+        .set('spark.hadoop.fs.s3a.endpoint', S3_ENDPOINT)
+        .set('spark.hadoop.fs.s3a.access.key', S3_ACCESS_KEY)
+        .set('spark.hadoop.fs.s3a.secret.key', S3_SECRET_KEY)
+        .set('spark.hadoop.fs.s3a.impl', 'org.apache.hadoop.fs.s3a.S3AFileSystem')
+        .set('spark.hadoop.fs.s3a.path.style.access', 'true')
+        .set('spark.hadoop.fs.s3a.connection.ssl.enabled', 'false')  # Disable SSL if using MinIO locally
+)
+
+## Start Spark Session
+spark = SparkSession.builder.config(conf=conf).getOrCreate()
+print("Spark Running")
 # Read data from Kafka (batch mode)
 kafka_df = spark.readStream \
     .format("kafka") \
@@ -83,11 +106,11 @@ kafka_df = kafka_df.withColumn("value", from_json("value", column_schema))
 kafka_df.createOrReplaceTempView("kafkadata")
 
 spark.sql("""
-create database if not exists payment
+create database if not exists nessie.payment
 """).show(truncate=False)
 
 spark.sql("""
-        CREATE TABLE IF NOT EXISTS payment.terminal (
+        CREATE TABLE IF NOT EXISTS nessie.payment.terminal (
       terminal_id INT,
       x_location FLOAT,
       y_location FLOAT,
@@ -123,7 +146,7 @@ def foreach_batch_function(df, epoch_id):
               where rn=1""")
     latest_data.createOrReplaceTempView('latest_data')
     spark.sql("""
-MERGE INTO payment.terminal AS target
+MERGE INTO nessie.payment.terminal AS target
 USING latest_data AS source
 ON target.terminal_id = source.terminal_id
 WHEN MATCHED THEN

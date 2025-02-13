@@ -24,4 +24,5 @@ matplotlib = "^3.10.0"
 pandarallel = "^1.6.5"
 seaborn = "^0.13.2"
 xgboost = "^2.1.4"
+duckdb = "^1.2.0"
 
