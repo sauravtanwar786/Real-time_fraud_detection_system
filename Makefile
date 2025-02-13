@@ -1,3 +1,4 @@
+# Commands
 up:
 	docker compose up -d --build
 
@@ -20,7 +21,26 @@ pg:
 pg-src:
 	curl -i -X POST -H "Accept:application/json" -H "Content-Type:application/json" localhost:8083/connectors/ -d '@./connect/pg-src-connector.json'
 
-s3-sink:
-	curl -i -X POST -H "Accept:application/json" -H "Content-Type:application/json" localhost:8083/connectors/ -d '@./connect/s3-sink.json'
+connectors: pg-src
 
-connectors: pg-src s3-sink
+# Variables
+SPARK_MASTER_URL = spark://spark-master:7077
+SPARK_JOBS_PATH = /opt/code/
+SPARK_DOCKER_EXEC = docker exec -it spark-master
+
+# Job targets
+job1:
+	$(SPARK_DOCKER_EXEC) /opt/bitnami/spark/bin/spark-submit --master $(SPARK_MASTER_URL) $(SPARK_JOBS_PATH)/kafka_s3_sink_customers.py
+
+job2:
+	$(SPARK_DOCKER_EXEC) /opt/bitnami/spark/bin/spark-submit --master $(SPARK_MASTER_URL) $(SPARK_JOBS_PATH)/kafka_s3_sink_terminals.py
+
+job3:
+	$(SPARK_DOCKER_EXEC) /opt/bitnami/spark/bin/spark-submit --master $(SPARK_MASTER_URL) $(SPARK_JOBS_PATH)/kafka_s3_sink_transactions.py
+
+# Run all jobs sequentially
+run-all: job1 job2 job3
+
+# Clean up
+clean:
+	docker compose down
