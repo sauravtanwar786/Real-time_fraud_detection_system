@@ -15,3 +15,10 @@ All the commands shown below are to be run via the terminal (use the Ubuntu term
 We have some helpful make commands to make working with our systems more accessible. Shown below are the make commands and their definitions
 
 ### Architecture
+
+
+make up
+make connectors
+http://localhost:9047/signup -> make account user name dremio password dremio123
+./dremio-init.sh
+http://localhost:8088/sqllab/ 

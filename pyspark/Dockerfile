@@ -33,3 +33,5 @@ RUN curl -fsSL https://repo1.maven.org/maven2/org/apache/spark/spark-token-provi
 # Download commons-pool2 JAR
 RUN curl -fsSL https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/${COMMONS_POOL2_VERSION}/commons-pool2-${COMMONS_POOL2_VERSION}.jar \
     --output ${SPARK_JARS_DIR}/commons-pool2-${COMMONS_POOL2_VERSION}.jar
+RUN curl -fsSL https://repo1.maven.org/maven2/org/projectnessie/nessie-integrations/nessie-spark-extensions-3.5_2.12/0.77.1/nessie-spark-extensions-3.5_2.12-0.77.1.jar \
+ --output ${SPARK_JARS_DIR}/nessie-spark-extensions-3.5_2.12-0.77.1.jar
