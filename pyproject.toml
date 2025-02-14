@@ -26,5 +26,5 @@ seaborn = "^0.13.2"
 xgboost = "^2.1.4"
 duckdb = "^1.2.0"
 polars = "^1.22.0"
-boto3 = "^1.36.20"
+pyiceberg = {version = "0.7", extras = ["s3fs", "sql-sqlite", "rest"]}
 

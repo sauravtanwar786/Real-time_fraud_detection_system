@@ -1,6 +1,16 @@
 version: '3.8'
 
 services:
+  trino:
+    image: trinodb/trino:442
+    container_name: trino
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./trino-config/catalog:/etc/trino/catalog
+    depends_on:
+      - nessie
+
   zookeeper:
     image: docker.io/bitnami/zookeeper:3.8
     ports:
@@ -58,6 +68,17 @@ services:
     container_name: nessie
     ports:
       - 19120:19120
+    environment:
+      - nessie.version.store.type=IN_MEMORY
+      - nessie.catalog.default-warehouse=warehouse
+      - nessie.catalog.warehouses.warehouse.location=s3://commerce/warehouse
+      - nessie.catalog.service.s3.default-options.endpoint=http://minio:9000/
+      - nessie.catalog.service.s3.default-options.access-key=urn:nessie-secret:quarkus:nessie.catalog.secrets.access-key
+      - nessie.catalog.service.s3.default-options.path-style-access=true
+      - nessie.catalog.secrets.access-key.name=minio
+      - nessie.catalog.secrets.access-key.secret=minio123
+      - nessie.catalog.service.s3.default-options.region=us-east-1
+      - nessie.server.authentication.enabled=false
 
   minio:
     image: quay.io/minio/minio:RELEASE.2022-05-26T05-48-41Z
@@ -129,17 +150,6 @@ services:
       - python
       - ./data_gen.py
 
-  dremio:
-    build: 
-      context: ./dremio
-      dockerfile: Dockerfile
-    ports:
-      - 9047:9047
-      - 31010:31010
-      - 32010:32010
-    container_name: dremio
-    volumes:
-      - ./volume/dremio:/var/lib/dremio
 
   superset:
     build:

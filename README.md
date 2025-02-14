@@ -22,3 +22,22 @@ make connectors
 http://localhost:9047/signup -> make account user name dremio password dremio123
 ./dremio-init.sh
 http://localhost:8088/sqllab/ 
+
+
+
+
+run all the ml model training jobs (fraud detection model folder)
+
+make up
+
+make load_initial_data
+
+make connectors
+
+make job3 -> kafka -> trasnasctions
+
+make fraud_detection 
+
+
+for demo run above 2 commands and make pg 
+and add new entry in transactions tables

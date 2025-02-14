@@ -85,11 +85,6 @@ with open(LOCAL_MODEL_PATH, "rb") as f:
 loaded_scaler = joblib.load('/opt/data/scaler.pkl')
 
 
-# Define a Pandas UDF for inference
-@pandas_udf(DoubleType())  # Assuming model outputs a float
-def predict_udf(*cols: pd.Series) -> pd.Series:
-    features = pd.concat(cols, axis=1)  # Combine all feature columns
-    return pd.Series(model.predict(features))
 
 # Read streaming data from Iceberg table and  pass option of stream-from-timestamp as the current timestamp value in  unix miliseconds
 
