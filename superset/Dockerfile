@@ -1,18 +1,29 @@
 FROM apache/superset:latest
-# Switching to root to install the required packages
+
+# Switch to root to install required dependencies
 USER root
-# Install Dremio SQLAlchemy Drivers
-RUN pip install sqlalchemy_dremio trino s3fs
-USER superset
+
+# Install Dremio, Trino, and S3-related packages
+RUN pip install trino s3fs psycopg2-binary
+
+# Set up environment variables
 ENV SUPERSET_SECRET_KEY=XgiVZQdtlIIeqUmo8Rs2d5hjuQZrXsJh
-RUN superset fab create-admin \
-              --username admin \
-              --firstname Superset \
-              --lastname Admin \
-              --email example@thisemailwillneverexist.xyz \
-              --password admin
-RUN superset db upgrade
-# RUN superset load_examples
-RUN superset init
-RUN superset set_database_uri -d lakehouse  -u dremio+flight://dremio:dremio123@dremio:32010/?UseEncryption=false
-RUN superset set_database_uri -d trino_lakehouse  -u trino://user@trino:8080/nessie/schema
+
+# Set ownership of superset_home directory for persistence
+RUN mkdir -p /app/superset_home && chown -R superset:superset /app/superset_home
+
+# Switch back to the Superset user
+USER superset
+
+# Copy the custom Superset configuration
+COPY superset_config.py /etc/superset/
+
+# Define entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+# RUN chmod +x /entrypoint.sh
+
+# Set working directory
+WORKDIR /app
+
+# Set default command
+CMD ["/entrypoint.sh"]

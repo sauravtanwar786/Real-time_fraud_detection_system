@@ -50,19 +50,6 @@ services:
       - zookeeper
       - kafka
 
-  postgres:
-    image: debezium/postgres:15
-    container_name: postgres
-    hostname: postgres
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_DB=postgres
-      - POSTGRES_PASSWORD=postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-
   nessie:
     image: projectnessie/nessie:latest
     container_name: nessie
@@ -153,10 +140,44 @@ services:
 
   superset:
     build:
-      context: .
-      dockerfile: ./superset/Dockerfile
+      context: ./superset
+      dockerfile: Dockerfile
     container_name: superset
+    restart: unless-stopped  # Ensures Superset restarts if it fails
     ports:
       - 8088:8088
+    environment:
+      - SUPERSET_CONFIG_PATH=/etc/superset/superset_config.py
     volumes:
       - ./volume/superset:/var/lib/superset
+      - ./superset/superset_config.py:/etc/superset/superset_config.py
+      - ./volume/superset_home:/app/superset_home
+      - ./superset/entrypoint.sh:/entrypoint.sh
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
+      interval: 30s
+      retries: 5
+
+  postgres:
+    image: debezium/postgres:15
+    container_name: postgres
+    hostname: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      retries: 5
+
+volumes:
+  postgres_data:

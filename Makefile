@@ -6,7 +6,7 @@ remove-minio-data:
 	sudo rm -rf ./volume/minio
 
 compose-down:
-	docker compose down -v
+	docker compose down
 
 down: compose-down remove-minio-data
 
