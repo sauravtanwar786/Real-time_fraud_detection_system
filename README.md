@@ -1,59 +1,43 @@
+# Real Time Data Replication using Change Data Capture
+This repository implements a real-time credit card fraud detection pipeline using Debezium, Kafka, Spark and minio. A realtime data replication service using Debezium and Kafka replicates transaction data and processing via Spark Stremaing job. Meanwhile, classified transaction records will be displayed on the dashboard for visualization.
+
+## Project Design
+
+### Prerequisites
+1.[Docker version >= 20.10.17](https://docs.docker.com/engine/install/) Make sure that docker is running using 'docker ps'
+
+**Windows users**:  please setup WSL and a local Ubuntu Virtual machine following **[the instructions here](https://ubuntu.com/tutorials/install-ubuntu-on-wsl2-on-windows-10#1-overview)**. Install the above prerequisites on your ubuntu terminal; if you have trouble installing docker, follow **[the steps here](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-22-04#step-1-installing-docker)** (only Step 1 is necessary). Please install the make command with `sudo apt install make -y` (if its not already present).
+
+### Setup
+
+All the commands shown below are to be run via the terminal (use the Ubuntu terminal for WSL users). We will use docker to set up our containers. Clone and move into the lab repository, as shown below.
+
+We have some helpful make commands to make working with our systems more accessible. Shown below are the make commands and their definitions
+
+### Architecture
+
+
+make up
+make connectors
+http://localhost:9047/signup -> make account user name dremio password dremio123
+./dremio-init.sh
+http://localhost:8088/sqllab/ 
 
 
 
-### **Real-Time Data Replication using Change Data Capture**  
 
-This project implements a **real-time credit card fraud detection pipeline** using **Debezium, Kafka, Spark Streaming, and MinIO**. A **real-time data replication service** captures and replicates **transaction data** using **Debezium and Kafka**, while **Spark Streaming** processes the data. The **classified transaction records** are then displayed on a **dashboard for visualization and monitoring.**  
+run all the ml model training jobs (fraud detection model folder)
 
----
+make up
 
-### **Project Design & Prerequisites**  
+make load_initial_data
 
-#### **Prerequisites:**  
-1. **Docker** (Version ≥ 20.10.17) – Ensure Docker is running (`docker ps`).  
-2. **For Windows Users:**  
-   - Set up **WSL (Windows Subsystem for Linux)** and install **Ubuntu VM** following [this guide](#).  
-   - Install the necessary tools using:  
-     ```bash
-     sudo apt install make -y
-     ```
-   - Follow [these steps](#) to install **Docker** (only Step 1 required).  
+make connectors
 
----
+make job3 -> kafka -> trasnasctions
 
-### **Setup & Deployment**  
+make fraud_detection 
 
-All commands should be executed in the **terminal (Ubuntu for WSL users)**. The setup process uses **Docker** for containerized environments.  
 
-#### **Steps:**  
-1. Clone the repository and navigate to it.  
-2. Use **make commands** for an easier workflow:  
-
-| **Command** | **Description** |
-|------------|----------------|
-| `make up` | Starts all required containers |
-| `make load_initial_data` | Loads initial dataset for transactions |
-| `make connectors` | Sets up **Kafka connectors** for CDC |
-| `make job3` | Starts the **Kafka transactions stream** |
-| `make fraud_detection` | Runs the **fraud detection model** |
-| `make pg` | Adds a new transaction entry to PostgreSQL |
-
-#### **Demo Execution:**  
-To demonstrate the fraud detection system, run:  
-```bash
-make job3
-make fraud_detection
-```
-Then, add a **new transaction entry** in the PostgreSQL **transactions table** to trigger the pipeline.
-
----
-
-### **Architecture Overview**  
-- **Debezium + Kafka** → Captures **real-time database changes**  
-- **Spark Streaming** → Processes transactions & applies **fraud detection model**  
-- **MinIO** → Provides **object storage** for data persistence  
-- **Dremio + Apache Superset** → Visualizes classified transactions  
-
-This **scalable and real-time solution** ensures **instant fraud detection**, **seamless data replication**, and **interactive monitoring dashboards**. 🚀  
-
-Would you like any **further refinements** or **additional details**? 😊
+for demo run above 2 commands and make pg 
+and add new entry in transactions tables
