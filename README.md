@@ -42,3 +42,4 @@ make fraud_detection
 for demo run above 2 commands and make pg 
 and add new entry in transactions tables
 "# CDAC_Project" 
+"# CDAC_Project" 
